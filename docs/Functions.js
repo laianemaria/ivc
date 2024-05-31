@@ -60,9 +60,9 @@ function desenharMapa(idSvg, arquivoGeojson, arquivoCsv, campoConsulta) {
         d3.dsv(";", arquivoCsv, function (d) {
             if (d.Estado === "Pará" && codigosMunicipios.has(d['Código IBGE'])) {
                 var valor = d[campoConsulta].replace(',', '.').trim();
-                console.log(typeof d[campoConsulta]);
+                //le.log(typeof d[campoConsulta]);
                 valor = !isNaN(valor) ? parseFloat(valor) : valor;
-                console.log(typeof valor);
+                //console.log(typeof valor);
                 return {
                     codigo: d['Código IBGE'],
                     abastecimentoAgua: valor || "-"
@@ -286,3 +286,5 @@ function popularCardComSelects() {
     // Inicialmente desabilita o segundo select
     selectIndicador.disabled = true;
 }
+
+
