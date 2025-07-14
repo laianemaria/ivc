@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const URL_ESTADOS = "https://raw.githubusercontent.com/fititnt/gis-dataset-brasil/master/uf/geojson/uf.json";
     const dataSources = { 
         "Instituto Água e Saneamento": "municipiose_saneamento_export_14_07_2025.csv",
-        "IBGE População Quilombola": "e2852dc6-404c-4a54-95b2-a5bc8ef84c1a.csv",
+        //"IBGE População Quilombola": "e2852dc6-404c-4a54-95b2-a5bc8ef84c1a.csv",
     };
     
     const coastalZones = {
