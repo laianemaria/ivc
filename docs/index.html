@@ -1,266 +1,105 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-br" class="h-full bg-gray-100">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Painel Índice de Vulnerabilidade Climática</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
-        integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
-        crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"
-        integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy"
-        crossorigin="anonymous"></script>
-    <!-- Load d3.js -->
+    <title>Dashboard de Análise Geográfica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://d3js.org/d3.v5.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.js"
-        integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
-    <script src="https://kit.fontawesome.com/7d94912b47.js" crossorigin="anonymous"></script>
-    <script src="Functions.js"></script>
+    <style>
+        .map-container, .chart-container { position: relative; width: 100%; height: 650px; }
+        .chart-container { height: 550px; }
+        .map-container svg, .chart-container svg { width: 100%; height: 100%; }
+        .loader { border: 8px solid #f3f3f3; border-top: 8px solid #4f46e5; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .axis path, .axis line { fill: none; stroke: #9ca3af; shape-rendering: crispEdges; }
+        .axis text { font-size: 12px; fill: #4b5563; }
+        .bar:hover { fill: #fb923c; }
+        .legend-title { font-size: 18px; font-weight: bold; fill: #1f2937; }
+        .legend-text { font-size: 14px; fill: #374151; }
+        .spike { fill: none; stroke: #ef4444; stroke-width: 1.5; }
+        .bubble { fill: #3b82f6; fill-opacity: 0.6; stroke: #1e40af; stroke-width: 1; }
+        .map-base { fill: #fafafa; stroke: #ccc; }
+    </style>
 </head>
 
-<style>
-    sup {
-        font-size: 0.45em;
-        color: #202020;
-        vertical-align: super;
-
-    }
-
-    .tooltip {
-        position: absolute;
-        text-align: center;
-        width: auto;
-        height: auto;
-        padding: 2px;
-        font: 12px sans-serif;
-        background: lightsteelblue;
-        border: 0px;
-        border-radius: 8px;
-        pointer-events: none;
-    }
-</style>
-
-<body>
-    <main class="container-fluid">
-        <!-- Modal -->
-<div class="modal fade" id="betaModal" tabindex="-1" role="dialog" aria-labelledby="betaModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-          <div class="modal-header bg-dark text-white">
-            <h2 class="modal-title">Painel Índice de Vulnerabilidade Climática</h2>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body h1">
-            <p>Atenção: Esta página está em fase de testes beta. Problemas podem ocorrer durante a visualização e uso do site.</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-lg btn-primary" data-bs-dismiss="modal">Entendi</button>
-          </div>
-        </div>
-      </div>
-    
-  </div>
-
-        <div class="h1 text-center mt-5 mb-5 display-6"><b>Dashboard<br>Monitoramento das Vulnerabilidades<br>das Zonas
-                Costeiras do Pará</b>
-            <figcaption class="blockquote-footer mt-2 small">
-                Versão beta
-            </figcaption>
-        </div>
-
-        <div id="optCard" class="card"></div>
-
-
-        <div class="row row-cols-sm-1 row-cols-md-2 row-cols-xl-3 mt-5">
-            <div class="col mt-2 mb-2">
-
-                <div class="card">
-                    <div class="card-header bg-dark text-white h3"><b>Zonas Costeiras do Pará</b></div>
-                    <div class="card-body">
-                        <svg id="ZCP" width="800" height="650"></svg>
+<body class="h-full">
+    <div class="flex h-full">
+        <aside class="w-96 flex-shrink-0 bg-white p-6 shadow-lg overflow-y-auto">
+            <div class="space-y-6">
+                <h1 class="text-2xl font-bold text-gray-800">Filtros de Visualização</h1>
+                <div>
+                    <label for="filter-region" class="block text-sm font-medium text-gray-700">1. Região</label>
+                    <select id="filter-region" class="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base"></select>
+                </div>
+                <div>
+                    <label for="filter-state" class="block text-sm font-medium text-gray-700">2. Estado</label>
+                    <select id="filter-state" class="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base" disabled></select>
+                </div>
+                <div class="border-t border-gray-200"></div>
+                <div>
+                    <label for="filter-datasource" class="block text-sm font-medium text-gray-700">3. Fonte de Dados</label>
+                    <select id="filter-datasource" class="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base"></select>
+                </div>
+                <div>
+                    <label for="filter-indicator" class="block text-sm font-medium text-gray-700">4. Indicador</label>
+                    <select id="filter-indicator" class="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base" disabled></select>
+                </div>
+                
+                <div class="pt-4">
+                    <div class="flex items-center">
+                        <input id="filter-coastal-zone" name="coastal-zone" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <label for="filter-coastal-zone" id="label-coastal-zone" class="ml-3 block text-sm font-medium text-gray-500">
+                            Mostrar apenas Zona Costeira
+                        </label>
                     </div>
-                    <div class="card-footer bg-dark text-center">
-                        <div class="row row-cols-2">
-                            <div class="col">
-                                <div id="NomeZCP" class="text-white"></div>
-                            </div>
-                            <div class="col">
-                                <button id="DownFigSetorAll" type="button" class="btn btn-light w-75"><b>Download</b></button>
-                            </div>
+                </div>
+                
+                <button id="btn-apply-filters" class="w-full rounded-md bg-indigo-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    Visualizar no Mapa
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-8 bg-gray-100 overflow-y-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Dashboard de Monitoramento das Vulnerabilidades das Cidades/Zonas Costeiras do Brasil</h2>
+                <p class="mt-2 text-lg text-gray-600">Instituto Água e Saneamento</p>
+            </div>
+            
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <div class="bg-white p-4 rounded-xl shadow-md">
+                     <div class="mb-4 flex justify-between items-center gap-2">
+                        <button id="btn-back-to-brazil" class="hidden rounded bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-gray-300">&larr; Voltar</button>
+                        <div id="map-info" class="text-center flex-grow px-4">
+                            <p class="text-2xl font-semibold text-gray-800" id="map-title">Mapa do Brasil</p>
+                            <p class="text-md text-indigo-600 h-6" id="map-hover-info">&nbsp;</p>
                         </div>
+                        <button id="btn-download-map" class="rounded bg-blue-500 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-600 flex-shrink-0">Baixar</button>
+                     </div>
+                    <div class="map-container flex items-center justify-center">
+                        <div id="loader" class="loader hidden"></div>
+                        <svg id="map-visualization"></svg>
+                    </div>
+                </div>
+
+                <div id="chart-card" class="bg-white p-4 rounded-xl shadow-md hidden">
+                    <div class="mb-4 flex justify-between items-center gap-4">
+                        <h3 id="chart-title" class="text-xl font-semibold text-gray-800">Visualização Secundária</h3>
+                        <div id="chart-type-selector" class="hidden flex-shrink-0">
+                            <button id="btn-spike-map" class="rounded px-3 py-1 text-sm font-semibold">Spike</button>
+                            <button id="btn-bubble-map" class="rounded px-3 py-1 text-sm font-semibold">Bubble</button>
+                        </div>
+                        <button id="btn-download-chart" class="rounded bg-blue-500 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-600 flex-shrink-0">Baixar</button>
+                    </div>
+                    <div class="chart-container">
+                        <svg id="secondary-visualization"></svg>
                     </div>
                 </div>
             </div>
-
-            <div class="col mt-2 mb-2">
-                <div class="card">
-                    <div class="card-header bg-dark text-white h3"><b>Setor 1 - Marajó Ocidental</b></div>
-                    <div class="card-body">
-                        <svg id="Setor1" width="800" height="650"></svg>
-                    </div>
-                    <div class="card-footer bg-dark text-center">
-                        <div class="row row-cols-2">
-                            <div class="col">
-                                <div id="NomeSetor1" class="text-white h4"></div>
-                            </div>
-                            <div class="col">
-                                <!-- <button id="DownFigSetor1" type="button" class="btn btn-light w-75"><b>Download</b></button> -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col mt-2 mb-2">
-                <div class="card">
-                    <div class="card-header bg-dark text-white h3"><b>Setor 2 - Marajó Oriental</b></div>
-                    <div class="card-body">
-                        <svg id="Setor2" width="800" height="650"></svg>
-                    </div>
-                    <div class="card-footer bg-dark text-center">
-                        <div class="row row-cols-2">
-                            <div class="col">
-                                <div id="NomeSetor2" class="text-white h4"></div>
-                            </div>
-                            <div class="col">
-                                <!-- <button id="DownFigSetor1" type="button" class="btn btn-light w-75"><b>Download</b></button> -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col mt-2 mb-2">
-                <div class="card">
-                    <div class="card-header bg-dark text-white h3"><b>Setor 3 - Continental Estuarino</b></div>
-                    <div class="card-body">
-                        <svg id="Setor3" width="800" height="650"></svg>
-                    </div>
-                    <div class="card-footer bg-dark text-center">
-                        <div class="row row-cols-2">
-                            <div class="col">
-                                <div id="NomeSetor3" class="text-white h4"></div>
-                            </div>
-                            <div class="col">
-                                <!-- <button id="DownFigSetor1" type="button" class="btn btn-light w-75"><b>Download</b></button> -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col mt-2 mb-2">
-                <div class="card">
-                    <div class="card-header bg-dark text-white h3"><b>Setor 4 - Flúvio-Marítimo</b></div>
-                    <div class="card-body">
-                        <svg id="Setor4" width="800" height="650"></svg>
-                    </div>
-                    <div class="card-footer bg-dark text-center">
-                        <div class="row row-cols-2">
-                            <div class="col">
-                                <div id="NomeSetor4" class="text-white h4"></div>
-                            </div>
-                            <div class="col">
-                                <!-- <button id="DownFigSetor1" type="button" class="btn btn-light w-75"><b>Download</b></button> -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col mt-2 mb-2">
-                <div class="card">
-                    <div class="card-header bg-dark text-white h3"><b>Setor 5 - Costa Atlântica Paraense</b></div>
-                    <div class="card-body">
-                        <svg id="Setor5" width="800" height="650"></svg>
-                    </div>
-                    <div class="card-footer bg-dark text-center">
-                        <div class="row row-cols-2">
-                            <div class="col">
-                                <div id="NomeSetor5" class="text-white h4"></div>
-                            </div>
-                            <div class="col">
-                                <!-- <button id="DownFigSetor1" type="button" class="btn btn-light w-75"><b>Download</b></button> -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-    </main>
-    <script>
-        popularCardComSelects();
-        $(document).ready(function () {
-            $('#betaModal').modal('show');
-            const btnConsultar = document.getElementById('btnConsultar');
-            btnConsultar.addEventListener('click', function () {
-                const baseDados = document.getElementById('inputDataBase').value;
-                const indicador = document.getElementById('inputIndicador').value;
-                if (baseDados == 'Instituto Água e Saneamento') {
-                    if (indicador == 'Política Municipal de Saneamento Básico') {
-                        desenharMapa("#ZCP", "allSectors.geojson", 'data.csv', 'Possui Política Municipal de Saneamento Básico');
-                        desenharMapa("#Setor1", "SectorOne.geojson", 'data.csv', 'Possui Política Municipal de Saneamento Básico');
-                        desenharMapa("#Setor2", "SectorTwo.geojson", 'data.csv', 'Possui Política Municipal de Saneamento Básico');
-                        desenharMapa("#Setor3", "SectorThree.geojson", 'data.csv', 'Possui Política Municipal de Saneamento Básico');
-                        desenharMapa("#Setor4", "SectorFour.geojson", 'data.csv', 'Possui Política Municipal de Saneamento Básico');
-                        desenharMapa("#Setor5", "SectorFive.geojson", 'data.csv', 'Possui Política Municipal de Saneamento Básico');
-                    }
-                    else if (indicador == 'Plano Municipal de Saneamento Básico') {
-                        desenharMapa("#ZCP", "allSectors.geojson", 'data.csv', 'Possui Plano Municipal de Saneamento Básico');
-                        desenharMapa("#Setor1", "SectorOne.geojson", 'data.csv', 'Possui Plano Municipal de Saneamento Básico');
-                        desenharMapa("#Setor2", "SectorTwo.geojson", 'data.csv', 'Possui Plano Municipal de Saneamento Básico');
-                        desenharMapa("#Setor3", "SectorThree.geojson", 'data.csv', 'Possui Plano Municipal de Saneamento Básico');
-                        desenharMapa("#Setor4", "SectorFour.geojson", 'data.csv', 'Possui Plano Municipal de Saneamento Básico');
-                        desenharMapa("#Setor5", "SectorFive.geojson", 'data.csv', 'Possui Plano Municipal de Saneamento Básico');
-                    }
-                    else {
-                        desenharMapa("#ZCP", "allSectors.geojson", 'data.csv', indicador);
-                        desenharMapa("#Setor1", "SectorOne.geojson", 'data.csv', indicador);
-                        desenharMapa("#Setor2", "SectorTwo.geojson", 'data.csv', indicador);
-                        desenharMapa("#Setor3", "SectorThree.geojson", 'data.csv', indicador);
-                        desenharMapa("#Setor4", "SectorFour.geojson", 'data.csv', indicador);
-                        desenharMapa("#Setor5", "SectorFive.geojson", 'data.csv', indicador);
-                    }
-                }
-            });
-            function downloadPNG() {
-                var svg = document.querySelector('svg'); // Seleciona o elemento SVG que você deseja baixar
-                var svgData = new XMLSerializer().serializeToString(svg);
-                var canvas = document.createElement('canvas'); // Cria um elemento canvas
-                canvas.width = svg.width.baseVal.value; // Define a largura do canvas
-                canvas.height = svg.height.baseVal.value; // Define a altura do canvas
-                var ctx = canvas.getContext('2d');
-                var img = document.createElement('img');
-                img.setAttribute('src', 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData))));
-
-                img.onload = function () {
-                    ctx.drawImage(img, 0, 0);
-                    var pngData = canvas.toDataURL('image/png'); // Converte o canvas para formato PNG
-                    var downloadLink = document.createElement('a'); // Cria um link para download
-                    downloadLink.download = 'mapa.png'; // Define o nome do arquivo para download
-                    downloadLink.href = pngData;
-                    downloadLink.click(); // Inicia o download
-                };
-            }
-
-            // Adiciona um ouvinte de evento ao botão com o ID 'DownFigSetor1'
-            document.getElementById('DownFigSetorAll').addEventListener('click', downloadPNG);
-            //document.getElementById('DownFigSetor1').addEventListener('click', downloadPNG);
-            //document.getElementById('DownFigSetor2').addEventListener('click', downloadPNG);
-            //document.getElementById('DownFigSetor3').addEventListener('click', downloadPNG);
-            //document.getElementById('DownFigSetor4').addEventListener('click', downloadPNG);
-            //document.getElementById('DownFigSetor5').addEventListener('click', downloadPNG);
-
-        });
-
-    </script>
-    <div class="text-center text-white bg-dark mt-0 py-1">Página criada por Laiane Rodrigues</div>
-
+        </main>
+    </div>
+    <script src="main.js"></script>
 </body>
-
 </html>
